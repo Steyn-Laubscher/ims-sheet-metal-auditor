@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 450 188" role="img" aria-label="IMS South Africa">
+  <rect width="450" height="188" rx="18" fill="#d4f3da"/><rect x="20" y="20" width="150" height="148" rx="10" fill="#202624"/>
+  <path d="M45 135V53h25v57l18-25 18 25V53h25v82h-25l-18-25-18 25z" fill="#d4f3da"/>
+  <text x="194" y="91" font-family="Arial,sans-serif" font-weight="800" font-size="43" fill="#202624">IMS</text>
+  <text x="195" y="130" font-family="Arial,sans-serif" font-size="18" letter-spacing="3" fill="#202624">SOUTH AFRICA</text>
+</svg>
