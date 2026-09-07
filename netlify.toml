@@ -2,7 +2,18 @@
   command = "npm run build"
   publish = "dist"
 
+# Public identifiers for this app's single-tenant Microsoft 365 registration.
+# No client secret is used or stored by this browser application.
+[build.environment]
+  VITE_M365_CLIENT_ID = "86e4871c-40ec-4cd0-b864-96b6c54edbad"
+  VITE_M365_TENANT_ID = "3c3a1cec-c7f2-426e-9b72-d1f1fae24188"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+[[headers]]
+  for = "/redirect.html"
+  [headers.values]
+    Cache-Control = "no-store"
+    Referrer-Policy = "no-referrer"

@@ -7,19 +7,23 @@ const numberValue = (value: unknown) => { const n = Number(String(value ?? '').r
 const normal = (name: string) => clean(name).replace(/\.(dft|dwg|pdf)$/i, '').replace(/[_-]?rev(?:ision)?[ _-]?[a-z0-9]+$/i, '').replace(/\s+/g, ' ').trim().toUpperCase();
 const findColumn = (headers: string[], words: string[]) => words.reduce((found, word) => found >= 0 ? found : headers.findIndex(h => h.includes(word)), -1);
 
-function rowsToParts(rows: unknown[][], kind: SourceKind): Part[] {
-  const headerAt = rows.findIndex(row => row.filter(Boolean).length >= 2 && row.some(v => /part|item|description|thickness|nested|cut qty/i.test(clean(v))));
+export function rowsToParts(rows: unknown[][], kind: SourceKind): Part[] {
+  const headerAt = rows.findIndex(row => row.some(v => /part|item|description/i.test(clean(v))) && row.some(v => /qty|quantity|thickness|material/i.test(clean(v))));
   const headers = (rows[headerAt >= 0 ? headerAt : 0] ?? []).map(clean).map(v => v.toUpperCase());
   const nameIdx = findColumn(headers, ['PART NUMBER', 'PART NAME', 'DESCRIPTION', 'PART', 'ITEM']);
-  const qtyIdx = findColumn(headers, [kind === 'bom' ? 'QTY' : 'CUT QTY', 'NESTED QTY', 'QUANTITY']);
-  const thickIdx = findColumn(headers, ['THICKNESS', 'GAUGE', 'MATERIAL']);
+  const qtyIdx = findColumn(headers, [kind === 'bom' ? 'QTY' : 'CUT QTY', 'NESTED QTY', 'QUANTITY', 'QTY']);
+  const thickIdx = findColumn(headers, ['THICKNESS', 'GAUGE', 'THK']);
+  const materialIdx = findColumn(headers, ['MATERIAL TYPE', 'MATERIAL']);
+  if (kind === 'bom' && materialIdx < 0) throw new Error('No Material / Material Type column found. The BOM must identify Mild Steel or AISI 304 rows before comparison.');
   const result: Part[] = [];
   rows.slice(headerAt >= 0 ? headerAt + 1 : 0).forEach((row, i) => {
+    const material = clean(row[materialIdx]).toUpperCase();
+    if (kind === 'bom' && material !== 'MILD STEEL' && material !== 'AISI 304') return;
     const name = clean(row[nameIdx >= 0 ? nameIdx : 0]);
     if (!name || /part number|description|item no/i.test(name)) return;
     const rowText = row.map(clean).join(' ');
     if (kind === 'jobcard' && !/\.dft|\.dwg|\.pdf/i.test(rowText) && name.length < 4) return;
-    result.push({ name: name.replace(/\.(dft|dwg|pdf)$/i, ''), quantity: numberValue(row[qtyIdx >= 0 ? qtyIdx : 1]), thickness: clean(row[thickIdx >= 0 ? thickIdx : -1]), sourceRow: i + 1 });
+    result.push({ name: name.replace(/\.(dft|dwg|pdf)$/i, ''), quantity: numberValue(row[qtyIdx >= 0 ? qtyIdx : 1]), thickness: clean(row[thickIdx]), sourceRow: (headerAt >= 0 ? headerAt + 2 : 1) + i });
   });
   return result;
 }
@@ -27,7 +31,11 @@ function rowsToParts(rows: unknown[][], kind: SourceKind): Part[] {
 async function parseXlsx(file: File, kind: SourceKind) {
   const workbook = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
   const all: Part[] = [];
-  workbook.SheetNames.forEach(sheet => all.push(...rowsToParts(XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1, defval: '' }) as unknown[][], kind)));
+  workbook.SheetNames.forEach(sheet => {
+    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], { header: 1, defval: '' }) as unknown[][];
+    if (!rows.some(row => row.some(v => /part|item|description/i.test(clean(v))) && row.some(v => /qty|quantity|thickness|material/i.test(clean(v))))) return;
+    all.push(...rowsToParts(rows, kind));
+  });
   return all;
 }
 
@@ -60,11 +68,21 @@ function parseJobCardText(text: string): Part[] {
 export async function parseDocument(file: File, kind: SourceKind): Promise<Part[]> {
   const extension = file.name.split('.').pop()?.toLowerCase();
   if (extension === 'xlsx' || extension === 'xls' || extension === 'csv') {
-    if (extension === 'csv') return rowsToParts((await file.text()).split(/\r?\n/).map(line => line.split(',')), kind);
     return parseXlsx(file, kind);
   }
-  if (extension === 'docx') return parseJobCardText((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value);
-  if (extension === 'doc') return parseJobCardText(parseLegacyDoc(await file.arrayBuffer()));
+  if (extension === 'docx') {
+    if (kind === 'bom') {
+      const html = (await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() })).value;
+      const document = new DOMParser().parseFromString(html, 'text/html');
+      const tables = [...document.querySelectorAll('table')].map(table => [...table.rows].map(row => [...row.cells].map(cell => cell.textContent || '')));
+      return tables.flatMap(rows => rowsToParts(rows, kind));
+    }
+    return parseJobCardText((await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() })).value);
+  }
+  if (extension === 'doc') {
+    if (kind === 'bom') throw new Error('Please save this legacy BOM as XLSX, CSV or a DOCX table with Material and Thickness columns so the material filter can be verified.');
+    return parseJobCardText(parseLegacyDoc(await file.arrayBuffer()));
+  }
   throw new Error('Unsupported file type. Please choose .xlsx, .xls, .csv, .doc, or .docx.');
 }
 

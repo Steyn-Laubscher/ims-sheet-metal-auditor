@@ -23,6 +23,7 @@ export function compareParts(bom: Part[], job: Part[]): Comparison[] {
     const thickMismatch = b.thickness && j.thickness && b.thickness.toUpperCase() !== j.thickness.toUpperCase();
     let severity: Severity = 'match'; let explanation = 'Part name, quantity, and thickness match.';
     if (qtyMismatch || thickMismatch || dangerous(b.name, j.name)) { severity = 'critical'; explanation = [dangerous(b.name,j.name) ? 'Potentially dangerous part-name change (4T/3T or STD/LHS/RHS).' : '', qtyMismatch ? 'Quantity differs.' : '', thickMismatch ? 'Thickness differs.' : ''].filter(Boolean).join(' '); }
+    else if (b.quantity == null || j.quantity == null || !b.thickness || !j.thickness) { severity = 'warning'; explanation = 'Quantity or thickness is missing; an exact match cannot be confirmed.' + (rev ? ' Revision-only name difference also requires confirmation.' : nameChanged ? ' Part names also differ.' : ''); }
     else if (rev || nameChanged) { severity = rev ? 'revision' : 'warning'; explanation = rev ? 'Revision-only difference; confirm the released revision.' : 'Part name differs; human confirmation required.'; }
     result.push({ id: crypto.randomUUID(), severity, bomPart: b.name, jobPart: j.name, bomQty: qty(b.quantity), jobQty: qty(j.quantity), bomThickness: thickness(b.thickness), jobThickness: thickness(j.thickness), explanation });
   });

@@ -6,10 +6,14 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --import tsx --test tests/*.test.ts"
   },
   "dependencies": {
+    "@azure/msal-browser": "^5.21.0",
     "@vitejs/plugin-react": "latest",
+    "jspdf": "^4.2.1",
+    "jspdf-autotable": "^5.0.8",
     "mammoth": "latest",
     "react": "latest",
     "react-dom": "latest",
@@ -17,8 +21,9 @@
     "xlsx": "latest"
   },
   "devDependencies": {
-    "typescript": "latest",
     "@types/react": "latest",
-    "@types/react-dom": "latest"
+    "@types/react-dom": "latest",
+    "tsx": "^4.23.13",
+    "typescript": "latest"
   }
 }
