@@ -11,12 +11,15 @@ export function rowsToParts(rows: unknown[][], kind: SourceKind): Part[] {
   const headerAt = rows.findIndex(row => row.some(v => /part|item|description/i.test(clean(v))) && row.some(v => /qty|quantity|thickness|material/i.test(clean(v))));
   const headers = (rows[headerAt >= 0 ? headerAt : 0] ?? []).map(clean).map(v => v.toUpperCase());
   const nameIdx = findColumn(headers, ['PART NUMBER', 'PART NAME', 'DESCRIPTION', 'PART', 'ITEM']);
-  const qtyIdx = findColumn(headers, [kind === 'bom' ? 'QTY' : 'CUT QTY', 'NESTED QTY', 'QUANTITY', 'QTY']);
+  // Pre-production uses the nesting plan, not the workshop's cut/sign-off column.
+  const qtyIdx = findColumn(headers, kind === 'bom' ? ['QTY', 'QUANTITY'] : ['NESTED QTY', 'NESTED QUANTITY', 'CUT QTY', 'QUANTITY', 'QTY']);
   const thickIdx = findColumn(headers, ['THICKNESS', 'GAUGE', 'THK']);
   const materialIdx = findColumn(headers, ['MATERIAL TYPE', 'MATERIAL']);
   if (kind === 'bom' && materialIdx < 0) throw new Error('No Material / Material Type column found. The BOM must identify Mild Steel or AISI 304 rows before comparison.');
   const result: Part[] = [];
-  rows.slice(headerAt >= 0 ? headerAt + 1 : 0).forEach((row, i) => {
+  const dataRows = rows.slice(headerAt >= 0 ? headerAt + 1 : 0);
+  const materialSection = kind === 'jobcard' ? dataRows.findIndex(row => row.filter(v => clean(v)).length === 1 && row.some(v => /^material data$/i.test(clean(v)))) : -1;
+  (materialSection >= 0 ? dataRows.slice(0, materialSection) : dataRows).forEach((row, i) => {
     const material = clean(row[materialIdx]).toUpperCase();
     if (kind === 'bom' && material !== 'MILD STEEL' && material !== 'AISI 304') return;
     const name = clean(row[nameIdx >= 0 ? nameIdx : 0]);

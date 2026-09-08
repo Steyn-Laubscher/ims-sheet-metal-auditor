@@ -6,6 +6,21 @@ import { csvReport, pdfReport } from '../src/report-export';
 
 const context = { bomName: 'Production BOM.xlsx', jobName: 'Cutting list.doc' };
 const header = ['Part Name', 'Quantity', 'Material Type', 'Thickness'];
+test('pre-production uses Nested qty even when Cut qty is blank or different', () => {
+  const parts = rowsToParts([
+    ['No.', 'Part name', 'Thk. (mm)', 'Nested qty.', 'Cut qty.', 'Bent qty.'],
+    [1, 'CCM1-1-1 RevA.dft', 2, 2, '', ''],
+    [2, 'CCM1-1-6 RevB.dft', 2, 4, 1, 1],
+    [3, 'CCM1-1-7 RevB.dft', 2, 0, 2, ''],
+    [4, 'CCM1-1-8 RevA.dft', 2, '', 2, ''],
+    ['', 'Material data', '', '', '', ''],
+    ['', 'Material', 'Thickness', 'Size X', 'Size Y', 'Sheet qty.'],
+    ['', 'Mild Steel', 2, 2450, 1230, 5],
+  ], 'jobcard');
+  assert.deepEqual(parts.map(p => p.quantity), [2, 4, 0, null]);
+  const bom = rowsToParts([header, ['CCM1-1-1 RevA', 2, 'Mild Steel', 2]], 'bom');
+  assert.equal(compareParts(bom, [parts[0]])[0].severity, 'match');
+});
 test('BOM includes only allowed materials, independent of column order and casing', () => {
   const parts = rowsToParts([header, ['A', 1, 'Mild Steel', 2], ['B', 2, ' AISI 304 ', 0.8], ['C', 1, 'Aluminium', 3], ['D', 1, '', 2], ['E', 1, 'mild steel', 1], ['F', 1, 'AISI 304L', 2]], 'bom');
   assert.deepEqual(parts.map(p => p.name), ['A', 'B', 'E']);
