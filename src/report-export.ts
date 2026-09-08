@@ -1,9 +1,10 @@
 import type { Comparison } from './types';
+import { statusLabel } from './status-label';
 
 export type ReportFormat = 'csv' | 'pdf';
 export type ReportContext = { bomName: string; jobName: string };
 const columns = ['Status', 'BOM part', 'Job-card part', 'BOM quantity', 'Job-card quantity', 'BOM thickness', 'Job-card thickness', 'Explanation'];
-const values = (r: Comparison) => [r.severity, r.bomPart, r.jobPart, r.bomQty, r.jobQty, r.bomThickness, r.jobThickness, r.explanation];
+const values = (r: Comparison) => [statusLabel(r.severity), r.bomPart, r.jobPart, r.bomQty, r.jobQty, r.bomThickness, r.jobThickness, r.explanation];
 
 export function csvReport(rows: Comparison[]): Blob {
   const cell = (value: string) => `"${(/^[\s]*[=+@-]/.test(value) ? "'" : '') + value.replaceAll('"', '""')}"`;
@@ -29,7 +30,7 @@ export async function pdfReport(rows: Comparison[], context: ReportContext): Pro
     startY: 34 + meta.length * 4,
     margin: { left: 12, right: 12, top: 12, bottom: 17 },
     head: [['Status', 'BOM part', 'Job-card part', 'Qty\nBOM / Job', 'Thickness\nBOM / Job', 'Explanation']],
-    body: rows.map(r => [r.severity.toUpperCase(), r.bomPart, r.jobPart, `${r.bomQty} / ${r.jobQty}`, `${r.bomThickness} / ${r.jobThickness}`, r.explanation]),
+    body: rows.map(r => [statusLabel(r.severity), r.bomPart, r.jobPart, `${r.bomQty} / ${r.jobQty}`, `${r.bomThickness} / ${r.jobThickness}`, r.explanation]),
     styles: { font: 'helvetica', fontSize: 8, cellPadding: 2.5, overflow: 'linebreak', valign: 'top', lineColor: [220, 225, 220], lineWidth: 0.1 },
     headStyles: { fillColor: [32, 38, 36], textColor: [255, 255, 255] },
     alternateRowStyles: { fillColor: [244, 245, 240] },

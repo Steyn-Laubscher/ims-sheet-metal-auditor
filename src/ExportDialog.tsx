@@ -56,8 +56,8 @@ export function ExportDialog({ format, rows, context, onClose }: { format: Repor
     <div className="export-options">{([
       ['all', 'All', 'Include the complete comparison report, including exact matches'],
       ['critical', 'Critical', 'Missing parts, quantity/thickness mismatches and suspected wrong parts'],
-      ['warning', 'Warnings', 'Name mismatches, unverified values and extra job-card parts'],
-      ['revision', 'Revision Differences', 'Revision-only name changes requiring confirmation'],
+      ['warning', 'Other warnings', 'Name mismatches, unverified values and extra job-card parts'],
+      ['revision', 'Warning: Revision', 'Revision-only name changes requiring confirmation'],
     ] as const).map(([key, label, description]) => <label className={`export-option ${selection[key] ? 'checked' : ''}`} key={key}><input type="checkbox" disabled={busy} checked={selection[key]} onChange={() => toggle(key)} /><span><strong>{label}</strong><small>{description}</small></span></label>)}</div>
     <div className="mail-details"><strong>Email recipients</strong><div>To: werner@imssa.co.za; john@imssa.co.za</div><div>Cc: nikita@imssa.co.za</div><p>Mail Selected uploads only the selected report to your Microsoft 365 Drafts with the attachment included. Open Drafts in your installed Outlook to review and send. The original BOM and job card stay in your browser.</p>
       {!microsoftConfigured ? <p role="status">Microsoft 365 email setup is required. Ask your administrator to configure this app. Downloads are still available.</p> : <div className="microsoft-connection"><p>{account ? `Connected: ${account}` : 'Connect your Microsoft 365 work account to create a draft.'}</p><button disabled={!authReady || busy} onClick={connect}>{account ? 'Change account / Reconnect' : 'Connect Microsoft 365'}</button>{account && <button disabled={busy} onClick={disconnect}>Disconnect</button>}</div>}
